@@ -3,7 +3,7 @@ from model import *
 from bson.json_util import dumps
 from bson.json_util import loads
 
-CONNECTION_STRING = "mongodb+srv://admin:admin@cluster0.b0egw.mongodb.net/iuk?retryWrites=true&w=majority"
+CONNECTION_STRING = "STRING"
 client = pymongo.MongoClient(CONNECTION_STRING)
 db = client.get_database('iuk')
 
