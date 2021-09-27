@@ -6,7 +6,7 @@ from bson.json_util import loads
 import pdfkit
 from io import BytesIO
 
-from db import db, testDB, userDB
+from db import db, userDB
 from model import *
 from werkzeug.utils import secure_filename
 from vprocess import calib_func, handle_move
@@ -67,7 +67,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/main-upload', methods=['POST'])
 def main_upload():
-    # global status
+    global status
     status = 0
     email = request.form["email"]
     movement = request.form["move"]
@@ -79,28 +79,26 @@ def main_upload():
     filename = secure_filename(email+movement+".mp4")
 
     print("file: ", filename)
+    uploaded_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    vpath = "./uploads/" + filename
+    # res = handle_move(movement, cal, vpath, email)
+    status = handle_move(movement, 500, "./demo/nc_sit.mp4", email)
 
-    # try:
-    if filename != '':
-        # file_ext = os.path.splitext(filename)[1]
-        # if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-        #     abort(400)
-        uploaded_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        vpath = "./uploads/" + filename
-        # res = handle_move(movement, 500, vpath, email)
-        res = handle_move(movement, 500, "./demo/nc_sit.mp4", email)
+    try:
+        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    except Exception as e:
+        print("Error in delete: ", e)
 
-        print("In exex: ", res)
+    print("In exex: ", status)
 
-    return jsonify({"status": 0})
+    return jsonify({"status": status})
 
 
 @app.route('/calibrate-upload', methods=['POST'])
 def calibrate_upload():
     email = request.form["email"]
-    movement = request.form["move"]
 
-    print("Email + movem: ", email+" "+movement)
+    print("Email + movem: ", email)
 
     uploaded_file = request.files['video']
     filename = secure_filename(email+"calib.mp4")
@@ -110,12 +108,13 @@ def calibrate_upload():
     ppm = 0
     # try:
     if filename != '':
-        # file_ext = os.path.splitext(filename)[1]
-        # if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-        #     abort(400)
         uploaded_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         vpath = "./uploads/" + filename
         ppm = calib_func(vpath)
+        try:
+            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        except Exception as e:
+            print("Error in delete: ", e)
 
     return jsonify({"status": 0, "ppm": ppm})
 
@@ -185,7 +184,6 @@ def report():
                            hip_abduct=hip_abduct, shoulder_flex=shoulder_flex, lumbar_flex=lumbar_flex,
                            cerv_rot=cerv_rot, s2s=s2s)
     config = pdfkit.configuration(wkhtmltopdf="C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe")
-    # pdfkit.from_string(html, 'MyPDF.pdf', configuration=config)
     pdfd = pdfkit.from_string(html, False, configuration=config)
 
     response = make_response(pdfd)
@@ -212,28 +210,25 @@ def main_record():
 
 @app.route("/calibrate", methods=['POST'])
 def calibrate():
+    # get data from form
     email = request.form["email"]
     movement = request.form["movement"]
 
+    # check if user exists in DB
     result = userDB.find_one({"email": email})
-    print("Check: ", result)
+    # print("Check: ", result)
     if result is None:
+        # initialize user record in DB
         umov = Umovements(email)
         jsonstr = umov.__dict__
         userDB.insert_one(jsonstr)
-        cursor = list(userDB.find())
-        print(loads(dumps(cursor)))
+        # cursor = list(userDB.find())
+        # print(loads(dumps(cursor)))
 
-    print("Email + movem: ", email+" "+movement)
+    # print("Email + movem: ", email+" "+movement)
 
     return render_template("calibration_recording.html", email=email, movement=movement)
 
-#
-# @app.route("/")
-# def index():
-#     return "Hello World"
-
 
 if __name__ == "__main__":
-    # app.run(ssl_context='adhoc')
     app.run()

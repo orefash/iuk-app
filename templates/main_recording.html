@@ -42,7 +42,7 @@
                         <input type="hidden" id="movement" name="movement" value="{{ movement }}">
 
 
-                    <input type="hidden" id="ppm" name="ppm" value="{{ ppm }}">
+                        <input type="hidden" id="ppm" name="ppm" value="{{ ppm }}">
 
                     <a href="/"><button type="button" >Cancel</button></a>
 
@@ -74,11 +74,9 @@
         let nextBtn = document.getElementById("nextBtn");
         let uploadStatus = document.getElementById("uploadStatus");
         let ppm = document.getElementById("ppm").value;
-        // if (x.style.display === "none") {
-        //     x.style.display = "block";
-        //   } else {
+
             nextBtn.style.display = "none";
-          // }
+
         console.log("Movement: ", move)
         console.log("Email: ", email)
 
@@ -171,10 +169,7 @@
                 function startRecording(){
                     mediaRecorder.start();
 
-                    let error = "Recording Started!!!";
-                    errorT.style.display = "block";
-                    errorT.innerHTML = error;
-                    errorT.style.color = "#00ff00";
+
 
                     console.log(mediaRecorder.state);
                 }
@@ -261,7 +256,14 @@
 
                 mediaRecorder.onstart = (ev) => {
                     console.log("On start is starting")
-                    endRecord();
+                    let error = "Recording Started!!!";
+                    errorT.style.display = "block";
+                    errorT.innerHTML = error;
+                    errorT.style.color = "#00ff00";
+                    if(move === "sit2stand"){
+                        endRecord();
+                    }
+
                 }
 
 
@@ -307,9 +309,6 @@
                             console.log(JSON.parse(http.responseText))
                             // console.log(http.responseXML)
                             let res = JSON.parse(http.responseText);
-                            // console.log("PPM: ", res.ppm)
-                            //
-                            // ppm.value = res.ppm
 
                             nextBtn.style.display = "block";
                             uploadBtn.style.display = "none";

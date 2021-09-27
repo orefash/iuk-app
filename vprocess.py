@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import gb_utils
 from db import add_movement_record
-from model import  *
+from model import *
 
 
 def sit2stand(video, ppm):
@@ -685,7 +685,6 @@ def handle_move(move, ppm, path, email):
         status = add_movement_record(move, res, email)
     except Exception as e:
         print("Error in move process: ", str(e))
-        # status = 0
 
     return status
 
