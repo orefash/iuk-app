@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Basic Page Info -->
+    <meta charset="utf-8">
+    
+    <title>GoodBoost</title>
+
+    
+</head>
+
+<body>
+
+        
+
+            <main>
+                
+                       <button type="button" id="btnStart">Start Recording</button>
+                        <button type="button" id="btnStop">Stop Recording</button>
+
+               		<br>
+                    <div id="errorid"> Recording Status will appear here</div>
+                    
+                    
+                    <video controls style="overflow: scroll;"></video>
+                    
+                
+                
+                    
+                    <video id="vid2" controls style="overflow: scroll;"></video>
+                    
+                    <br>
+                    <br>
+                    <a href="index.html"><button type="button">Cancel</button></a>
+                   
+                    <a href="main_recording.html"><button type="button" >Next</button></a>
+                
+
+
+                <!-- could save to canvas and do image manipulation and saving too -->
+            </main>
+
+        
+        
+    <!-- Main Content end -->
+
+   
+
+    <!-- Recording Script -->
+    <script>
+        let constraintObj = {
+            audio: false,
+            video: {
+                facingMode: "user",
+                width: {
+                    
+                    min: 480,
+                    ideal: 480,
+                    max: 720
+                },
+                height: {
+                    min: 640,
+                    ideal: 640,
+                    max: 1280
+                }
+            }
+        };
+        // width: 1280, height: 720  -- preference only
+        // facingMode: {exact: "user"}
+        // facingMode: "environment"
+
+        //handle older browsers that might implement getUserMedia in some way
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function(constraintObj) {
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function(resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        } else {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    devices.forEach(device => {
+                        console.log(device.kind.toUpperCase(), device.label);
+                        //, device.deviceId
+                    })
+                })
+                .catch(err => {
+                    console.log(err.name, err.message);
+                })
+        }
+
+        navigator.mediaDevices.getUserMedia(constraintObj)
+            .then(function(mediaStreamObj) {
+                //connect the media stream to the first video element
+                let video = document.querySelector('video');
+                if ("srcObject" in video) {
+                    video.srcObject = mediaStreamObj;
+                } else {
+                    //old version
+                    video.src = window.URL.createObjectURL(mediaStreamObj);
+                }
+
+                video.onloadedmetadata = function(ev) {
+                    //show in the video element what is being captured by the webcam
+                    video.play();
+                };
+
+                //add listeners for saving video/audio
+                let start = document.getElementById('btnStart');
+                let stop = document.getElementById('btnStop');
+                let vidSave = document.getElementById('vid2');
+                let mediaRecorder = new MediaRecorder(mediaStreamObj);
+                let chunks = [];
+
+                //Speech Recognition to call start and end record on video 
+                window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+                const recognition = new window.SpeechRecognition();
+                recognition.interimResults = true;
+                recognition.lang = "en-US";
+
+                recognition.addEventListener('result', (e) => {
+
+                    const text = Array.from(e.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('')
+
+                    console.log("text: " + text);
+
+                    if (text.includes("start recording")) {
+
+                        mediaRecorder.start();
+                       
+                        error = "Recording Started!!!";
+                        document.getElementById("errorid").style.display = "block";
+                        document.getElementById("errorid").innerHTML = error;
+                        document.getElementById("errorid").style.color = "#00ff00";
+   
+                        console.log(mediaRecorder.state);
+
+                    }
+
+                    if (text.includes("stop recording")) {
+
+                        mediaRecorder.stop();
+
+                        error = "Recording Stopped!!!";
+                        document.getElementById("errorid").style.display = "block";
+                        document.getElementById("errorid").innerHTML = error;
+                        document.getElementById("errorid").style.color = "#ff0000";
+
+                        console.log(mediaRecorder.state);
+
+
+                    }
+                });
+
+                start.addEventListener('click', (ev) => {
+                    mediaRecorder.start();
+                    error = "Recording Started!!!";
+                    document.getElementById("errorid").style.display = "block";
+                    document.getElementById("errorid").innerHTML = error;
+                    document.getElementById("errorid").style.color = "#00ff00";
+                    console.log(mediaRecorder.state);
+                });
+                stop.addEventListener('click', (ev) => {
+                    mediaRecorder.stop();
+                    error = "Recording Stopped!!!";
+                    document.getElementById("errorid").style.display = "block";
+                    document.getElementById("errorid").innerHTML = error;
+                    document.getElementById("errorid").style.color = "#ff0000";
+                    console.log(mediaRecorder.state);
+                });
+
+
+                recognition.addEventListener('end', recognition.start);
+
+                recognition.start();
+
+                mediaRecorder.ondataavailable = function(ev) {
+                    chunks.push(ev.data);
+                }
+
+                mediaRecorder.onstop = (ev) => {
+                    let blob = new Blob(chunks, {
+                        'type': 'video/mp4;'
+                    });
+                    chunks = [];
+                    let videoURL = window.URL.createObjectURL(blob);
+                    vidSave.src = videoURL;
+                }
+            })
+
+        .catch(function(err) {
+            console.log(err.name, err.message);
+        });
+
+        /*********************************
+        getUserMedia returns a Promise
+        resolve - returns a MediaStream Object
+        reject returns one of the following errors
+        AbortError - generic unknown cause
+        NotAllowedError (SecurityError) - user rejected permissions
+        NotFoundError - missing media track
+        NotReadableError - user permissions given but hardware/OS error
+        OverconstrainedError - constraint video settings preventing
+        TypeError - audio: false, video: false
+        *********************************/
+    </script>
+</body>
+</body>
+
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1"
+      crossorigin="anonymous"
+    />
+    <style>
+        .video-fluid {
+          width: 100%;
+          height: 200px;
+        }
+    </style>
+    <title>Vid upload demo</title>
+
+</head>
+<body class="container pt-5 bg-dark">
+
+    <div class="mt-4" id="div_language">
+      <h2 class="mb-3 text-light">Select Language</h2>
+    </div>
+
+    <div class="p-3" style="border: 1px solid gray; height: 50px; border-radius: 8px;">
+      <span id="final" class="text-light"></span>
+      <span id="interim" class="text-secondary"></span>
+    </div>
+    <div class="mt-4">
+      <button class="btn btn-success" id="start">Start</button>
+      <button class="btn btn-danger" id="stop">Stop</button>
+      <p id="status" class="lead mt-3 text-light" style="display: none">Listening ...</p>
+    </div>
+
+    <div class="row">
+        <div class="col">
+
+            <div class="mt-4" class="p-3" style="border: 1px solid gray; border-radius: 8px;">
+
+                <video id="rec" class="video-fluid " controls></video>
+
+            </div>
+
+
+        </div>
+        <div class="col">
+
+            <div class="mt-4" class="p-3" style="border: 2px solid gray; border-radius: 8px;">
+
+                <video id="rec2" class="video-fluid " controls></video>
+
+            </div>
+
+        </div>
+    </div>
+
+
+
+
+    <script>
+
+
+        let constraintObj = {
+            audio: false,
+            video: {
+                facingMode: "user",
+                width: { min: 640, ideal: 1280, max: 1280 },
+                height: { min: 480, ideal: 720, max: 720 }
+            }
+        };
+        // width: 1280, height: 720  -- preference only
+        // facingMode: {exact: "user"}
+        // facingMode: "environment"
+
+        //handle older browsers that might implement getUserMedia in some way
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function(constraintObj) {
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function(resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        }else{
+            navigator.mediaDevices.enumerateDevices()
+            .then(devices => {
+                devices.forEach(device=>{
+                    console.log(device.kind.toUpperCase(), device.label);
+                    //, device.deviceId
+                })
+            })
+            .catch(err=>{
+                console.log(err.name, err.message);
+            })
+        }
+
+
+
+        navigator.mediaDevices.getUserMedia(constraintObj)
+        .then(function(mediaStreamObj) {
+            //connect the media stream to the  video element
+            let video = document.getElementById('rec');
+            if ("srcObject" in video) {
+                video.srcObject = mediaStreamObj;
+            } else {
+                //old version
+                video.src = window.URL.createObjectURL(mediaStreamObj);
+            }
+
+            video.onloadedmetadata = function(ev) {
+                //show in the video element what is being captured by the webcam
+                video.play();
+            };
+
+            //add listeners for saving video/audio
+            let start = document.getElementById('start');
+            let stop = document.getElementById('stop');
+            let vidSave = document.getElementById('rec2');
+            let mediaRecorder = new MediaRecorder(mediaStreamObj);
+            let chunks = [];
+
+            let recognition = speechRecognitionInit();
+
+            if(recognition != null){
+                console.log("In speech valid");
+
+                recognition.onresult = (event) => {
+                    console.log("In speech result");
+
+                    let final_transcript = "";
+                    // Create the interim transcript string locally because we don't want it to persist like final transcript
+                    let interim_transcript = "";
+
+                    // Loop through the results from the speech recognition object.
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                      // If the result item is Final, add it to Final Transcript, Else add it to Interim transcript
+                      if (event.results[i].isFinal) {
+                        final_transcript += event.results[i][0].transcript;
+                      } else {
+                        interim_transcript += event.results[i][0].transcript;
+                      }
+                    }
+
+                    console.log("Text: ", final_transcript);
+
+                    if (final_transcript.includes("start recording")){
+
+                        mediaRecorder.start();
+
+                        console.log("IN start state: ",mediaRecorder.state);
+
+                    }
+
+                    if (final_transcript.includes("stop recording")){
+
+                        mediaRecorder.stop();
+                        console.log("IN stop state: ",mediaRecorder.state);
+
+                    }
+
+                    // Set the Final transcript and Interim transcript.
+                    document.querySelector("#final").innerHTML = final_transcript;
+                    document.querySelector("#interim").innerHTML = interim_transcript;`    `
+                };
+
+                recognition.start();
+
+            }else{
+
+
+
+            }
+
+
+            start.addEventListener('click', (ev)=>{
+                // if(mediaRecorder.state != "recording"){
+                    mediaRecorder.start();
+                    console.log("IN start state: ",mediaRecorder.state);
+                    console.log("IN start state: ",typeof mediaRecorder.state);
+                // }
+
+
+            })
+            stop.addEventListener('click', (ev)=>{
+                mediaRecorder.stop();
+                console.log("IN stop state: ",mediaRecorder.state);
+            });
+
+
+            mediaRecorder.ondataavailable = function(ev) {
+                chunks.push(ev.data);
+            }
+
+            let upload_blob = null;
+            mediaRecorder.onstop = (ev)=>{
+
+                let blob = new Blob(chunks, { 'type' : 'video/mp4;' });
+                chunks = [];
+                upload_blob = blob;
+                let videoURL = window.URL.createObjectURL(blob);
+                vidSave.src = videoURL;
+
+                let http = new XMLHttpRequest();
+                let url = '/upload';
+                http.open('POST', url, true);
+
+                let fd = new FormData();
+                   //append the recorded blob
+                fd.append("video",blob, "demo.mp4");
+                 //send data to server..............
+                http.send(fd);
+
+
+            }
+        })
+        .catch(function(err) {
+            console.log(err.name, err.message);
+        });
+
+
+        function speechRecognitionInit() {
+
+            let speechRecognition = null;
+
+            if ("webkitSpeechRecognition" in window) {
+                // Speech Recognition Stuff goes here
+                speechRecognition = new webkitSpeechRecognition();
+                speechRecognition.continuous = true;
+                speechRecognition.interimResults = true;
+
+                speechRecognition.onstart = () => {
+                    console.log("Start record");
+                    document.querySelector("#status").style.display = "block";
+                };
+
+                speechRecognition.onend = () => {
+
+                    console.log("end record");
+                    speechRecognition.start();
+                  document.querySelector("#status").style.display = "none";
+                };
+
+
+
+            } else {
+              console.log("Speech Recognition Not Available")
+            }
+
+            return speechRecognition;
+        }
+
+
+
+
+
+
+    </script>
+
+</body>
+</html>

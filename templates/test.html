@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<button type="button" id="btnStart">Start Recording</button>
+                <button type="button" id="btnStop">Stop Recording</button>
+
+
+                    <div id="errorid"> Recording Status will appear here</div>
+
+<script>
+
+        let errorT = document.getElementById("errorid");
+
+                let start = document.getElementById('btnStart');
+                let stop = document.getElementById('btnStop');
+
+                function initiateRecord() {
+                    let timeleft = 3;
+                    let downloadTimer = setInterval(function(){
+
+                      if(timeleft < 0){
+                        clearInterval(downloadTimer);
+                        startRecording();
+                        //document.getElementById("countdown").innerHTML = "Finished";
+                      } else {
+
+                        errorT.style.color = "#0000FF";
+                        errorT.innerHTML = "Recording begins in " + timeleft + " seconds";
+                      }
+                      timeleft -= 1;
+                    }, 1000);
+                }
+
+
+                function startRecording(){
+                    // mediaRecorder.start();
+
+                    // startTimer(10);
+
+                    let error = "Recording Started!!!";
+                    errorT.style.display = "block";
+                    errorT.innerHTML = error;
+                    errorT.style.color = "#00ff00";
+
+                    // console.log(mediaRecorder.state);
+                }
+
+                function stopRecording(){
+                    // mediaRecorder.stop();
+
+                    let error = "Recording Stopped!!!";
+                    errorT.style.display = "block";
+                    errorT.innerHTML = error;
+                    errorT.style.color = "#ff0000";
+
+                    // console.log(mediaRecorder.state);
+                }
+
+                start.addEventListener('click', (ev) => {
+                    // startRecording();
+                    initiateRecord();
+                });
+                stop.addEventListener('click', (ev) => {
+                    stopRecording();
+                });
+
+</script>
+
+</body>
+</html>

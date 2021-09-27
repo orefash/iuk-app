@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+    <title>GoodBoost</title>
+</head>
+
+<body>
+
+<div>
+
+    <form action="/calibrate" method="POST">
+
+
+        <label for="movement">Select Movement to Test and enter email below</label>
+    <br>
+    <br>
+		<select id="movement" name="movement">
+  			<option value="sit2stand">Sit-to-stand</option>
+            <option value="cerv_rot">Cervical rotation</option>
+            <option value="hip_int_rot">Hip internal rotation</option>
+            <option value="hip_abduction">Hip abduction</option>
+            <option value="lumbar_flex">Global lumbar flexion</option>
+            <option value="shoulder_flex">Shoulder flexion</option>
+            <option value="side_flex">Lumbar side flexion</option>
+            <option value="tragus">Tragus</option>
+		</select>
+		<br>
+		<br>
+		<!-- <label for="fname">Full name:</label>
+    	<input type="text" id="fname" name="fname"ß>
+    	<br> -->
+        <br>
+		<label for="email">Email:</label>
+    	<input type="email" id="email" name="email"ß>
+    	<br>
+    	<br>
+
+	<input type="submit" value="Submit">
+
+
+    </form>
+
+</div>
+<hr>
+<div>
+
+    <form action="/report" method="POST">
+
+
+        <label for="movement">Download Report </label>
+    <br>
+    <br>
+
+        <br>
+		<label for="email">Email:</label>
+    	<input type="email"  name="email"ß>
+    	<br>
+    	<br>
+
+	<input type="submit" value="Download">
+
+
+    </form>
+
+</div>
+<hr>
+                                
+    
+</body>
+</html>

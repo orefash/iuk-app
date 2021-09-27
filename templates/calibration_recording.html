@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Basic Page Info -->
+    <meta charset="utf-8">
+    
+    <title>GoodBoost</title>
+
+
+</head>
+
+<body>
+        
+
+            <main>
+
+
+                <button type="button" id="btnStart">Start Recording</button>
+                <button type="button" id="btnStop">Stop Recording</button>
+
+               		<br>
+                    <div id="errorid"> Recording Status will appear here</div>
+                    <div>
+
+                        <video controls style="overflow: scroll;"></video>
+
+                    </div>
+                <br>
+                    <div>
+                        <p>Recorded video</p>
+                        <video id="vid2" controls style="overflow: scroll;"></video>
+                    </div>
+
+                    
+                    <br>
+                    <br>
+                    <div id="uploadStatus"></div>
+
+                    <a href="/"><button type="button" >Cancel</button></a>
+
+                    <form action="/main-record" method="post">
+                        <input type="hidden" id="email" name="email" value="{{ email }}">
+                        <input type="hidden" id="movement" name="movement" value="{{ movement }}">
+
+                        <input type="hidden" id="ppm" name="ppm" value="0">
+
+                        <input type="hidden" id="status" name="status" value="0">
+                        <button id="nextBtn" type="submit" >Next</button>
+
+                    </form>
+
+                    <button  type="button" id="uploadBtn">Upload</button>
+                
+
+
+                <!-- could save to canvas and do image manipulation and saving too -->
+            </main>
+
+        
+       
+    
+
+    <!-- js -->
+    
+
+    <!-- Recording Script -->
+    <script>
+        let errorT = document.getElementById("errorid");
+        let move = document.getElementById("movement").value;
+        let email = document.getElementById("email").value;
+        let uploadBtn = document.getElementById("uploadBtn");
+        let nextBtn = document.getElementById("nextBtn");
+        let uploadStatus = document.getElementById("uploadStatus");
+        let ppm = document.getElementById("ppm");
+            nextBtn.style.display = "none";
+
+        console.log("Movement: ", move)
+        console.log("Email: ", email)
+
+        let constraintObj = {
+            audio: false,
+            video: {
+                facingMode: "user",
+                height: {
+                    
+                    min: 480,
+                    ideal: 480,
+                    max: 720
+                },
+                width: {
+                    min: 640,
+                    ideal: 640,
+                    max: 1280
+                }
+            }
+        };
+        // width: 1280, height: 720  -- preference only
+        // facingMode: {exact: "user"}
+        // facingMode: "environment"
+
+        //handle older browsers that might implement getUserMedia in some way
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function(constraintObj) {
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function(resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        } else {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    devices.forEach(device => {
+                        console.log(device.kind.toUpperCase(), device.label);
+                        //, device.deviceId
+                    })
+                })
+                .catch(err => {
+                    console.log(err.name, err.message);
+                })
+        }
+
+
+        let localstream;
+
+        navigator.mediaDevices.getUserMedia(constraintObj)
+            .then(function(mediaStreamObj) {
+                //connect the media stream to the first video element
+                localstream = mediaStreamObj;
+                let video = document.querySelector('video');
+                if ("srcObject" in video) {
+                    video.srcObject = mediaStreamObj;
+                } else {
+                    //old version
+                    video.src = window.URL.createObjectURL(mediaStreamObj);
+                }
+
+                video.onloadedmetadata = function(ev) {
+                    //show in the video element what is being captured by the webcam
+                    video.play();
+                };
+
+                //add listeners for saving video/audio
+                let start = document.getElementById('btnStart');
+                let stop = document.getElementById('btnStop');
+                let vidSave = document.getElementById('vid2');
+                let mediaRecorder = new MediaRecorder(mediaStreamObj);
+                let chunks = [];
+
+                function vidOff(){
+                    video.pause();
+                    video.src = ""
+                    localstream.getTracks()[0].stop();
+                    console.log("vid off")
+                }
+
+                //Speech Recognition to call start and end record on video 
+                window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+                const recognition = new window.SpeechRecognition();
+                recognition.interimResults = true;
+                recognition.lang = "en-US";
+
+
+                function initiateRecord() {
+                    let timeleft = 3;
+                    let downloadTimer = setInterval(function(){
+
+                      if(timeleft < 0){
+                        clearInterval(downloadTimer);
+                        startRecording();
+                        //document.getElementById("countdown").innerHTML = "Finished";
+                      } else {
+
+                        errorT.style.color = "#0000FF";
+                        errorT.innerHTML = "Recording begins in " + timeleft + " seconds";
+                      }
+                      timeleft -= 1;
+                    }, 1000);
+                }
+
+
+                function endRecord() {
+                    let timeleft = 10;
+                    let downloadTimer = setInterval(function(){
+
+                      if(timeleft < 0){
+                        clearInterval(downloadTimer);
+                        stopRecording();
+                        //document.getElementById("countdown").innerHTML = "Finished";
+                      } else {
+
+                        // errorT.style.color = "#0000FF";
+                        errorT.innerHTML = "Recording ends in " + timeleft + " seconds";
+                      }
+                      timeleft -= 1;
+                    }, 1000);
+                }
+
+
+                function startRecording(){
+                    mediaRecorder.start();
+
+                    let error = "Recording Started!!!";
+                    errorT.style.display = "block";
+                    errorT.innerHTML = error;
+                    errorT.style.color = "#00ff00";
+
+                    console.log(mediaRecorder.state);
+                }
+
+                function stopRecording(){
+                    mediaRecorder.stop();
+
+                    let error = "Recording Stopped!!!";
+                    errorT.style.display = "block";
+                    errorT.innerHTML = error;
+                    errorT.style.color = "#ff0000";
+
+                    console.log(mediaRecorder.state);
+                }
+
+                mediaRecorder.onstart = (ev) => {
+                    console.log("On start is starting")
+                    endRecord();
+                }
+
+
+                recognition.addEventListener('result', (e) => {
+
+                    const text = Array.from(e.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('')
+
+                    console.log("text: " + text);
+
+                    if (text.includes("start recording")) {
+                        initiateRecord();
+                    }
+
+                    if (text.includes("stop recording")){
+                        stopRecording();
+                    }
+                });
+
+                start.addEventListener('click', (ev) => {
+                    initiateRecord();
+                });
+                stop.addEventListener('click', (ev) => {
+                    stopRecording();
+                });
+
+
+                recognition.addEventListener('end', recognition.start);
+
+                recognition.start();
+
+                mediaRecorder.ondataavailable = function(ev) {
+                    chunks.push(ev.data);
+                }
+
+                let upload_blob = null;
+                mediaRecorder.onstop = (ev) => {
+                    let blob = new Blob(chunks, {
+                        'type': 'video/mp4;'
+                    });
+                    upload_blob = blob;
+                    chunks = [];
+                    let videoURL = window.URL.createObjectURL(blob);
+                    vidSave.src = videoURL;
+                }
+
+                uploadBtn.onclick = function() {
+
+                    uploadStatus.innerHTML = "Calibration in progress";
+                    vidOff();
+                    upload_vid()
+                };
+
+                function upload_vid(){
+                    console.log("Upload vid");
+
+                    let http = new XMLHttpRequest();
+                    let url = '/calibrate-upload';
+                    http.open('POST', url, true);
+
+                    let fd = new FormData();
+                       //append the recorded blob
+                    fd.append("video",upload_blob, "demo.mp4");
+                    fd.append("email",email);
+                    fd.append("move",move);
+
+                    http.onreadystatechange = function () {
+                        if(this.readyState==4 && this.status == 200){
+                            console.log(JSON.parse(http.responseText))
+                            // console.log(http.responseXML)
+                            let res = JSON.parse(http.responseText);
+                            console.log("PPM: ", res.ppm)
+
+                            ppm.value = res.ppm
+
+                            nextBtn.style.display = "block";
+                            uploadBtn.style.display = "none";
+                            uploadStatus.innerHTML = "Calibration complete. Click Next";
+
+                        }
+                    }
+                     //send data to server..............
+                    http.send(fd);
+                }
+            })
+
+        .catch(function(err) {
+            console.log(err.name, err.message);
+        });
+
+        /*********************************
+        getUserMedia returns a Promise
+        resolve - returns a MediaStream Object
+        reject returns one of the following errors
+        AbortError - generic unknown cause
+        NotAllowedError (SecurityError) - user rejected permissions
+        NotFoundError - missing media track
+        NotReadableError - user permissions given but hardware/OS error
+        OverconstrainedError - constraint video settings preventing
+        TypeError - audio: false, video: false
+        *********************************/
+    </script>
+</body>
+</body>
+
+</html>
